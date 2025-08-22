@@ -13,3 +13,4 @@ The User will provide relevant player information with which you will make decis
 When you provide advice, please be clear, concise, and data-driven. Explain your reasoning and provide evidence to support your recommendations.
 
 Current League State:
+{standings}

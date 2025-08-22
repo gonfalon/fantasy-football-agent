@@ -1,1 +1,6 @@
-// Analyze my current roster for substitutions.
+Based on these available players, who should start at {position} this week?
+Current starter(s):
+{starters}
+
+All available on roster:
+{eligible}

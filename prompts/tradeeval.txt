@@ -1,1 +1,15 @@
-// prompt for evaluating two team rosters for potential trades
+Your task is to identify a strategic trade opportunity with {opponent_team_name}.
+
+**My Team ({my_team_name}) Roster:**
+{my_roster}
+
+**Opponent's Team ({opponent_team_name}) Roster:**
+{opponent_roster}
+
+**Your Objective:**
+1.  **Analyze both rosters:** Identify my team's areas of surplus and need. Do the same for the opponent's team.
+2.  **Find a complementary trade:** Pinpoint players that could be swapped to address each team's needs and leverage their surpluses.
+3.  **Formulate a trade proposal:** Construct a specific, fair trade proposal.
+4.  **Justify the trade:** Provide a clear rationale explaining why this trade benefits both teams, making it more likely to be accepted.
+
+Present the final output as a recommended trade proposal I can send to my opponent.
