@@ -1,7 +1,7 @@
 We need to decide if a move at {position} is the right call this week. Should we stick with our current players, or try to sign one of these free agents?
 
 Here's our current roster at the position:
-{roster_players}
+{my_roster}
 
 And here are the top available free agents:
 {free_agents}

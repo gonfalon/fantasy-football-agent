@@ -9,16 +9,29 @@ dotenv.load_dotenv()
 LEAGUE_ID=int(os.environ.get("LEAGUE_ID"))
 LEAGUE_YEAR=int(os.environ.get("LEAGUE_YEAR"))
 ESPN_S2=os.environ.get("ESPN_S2")
-ESPN_SWID=os.environ.get("ESPN_SWID")
+ESPN_SW_ID=os.environ.get("ESPN_SW_ID")
 TEAM_NAME=os.environ.get("TEAM_NAME")
+OLLAMA_URL=os.environ.get("OLLAMA_URL")
+OLLAMA_MODEL=os.environ.get("OLLAMA_MODEL")
 
-# import systemprompt.txt into a variable
-with open('prompts/systemprompt.txt', 'r') as f:
+POSITION_LIST=["QB", "RB", "WR", "TE", "FLEX", "D/ST", "K"]
+
+# import system_prompt.txt into a variable
+with open('prompts/system_prompt.txt', 'r') as f:
     system_prompt = f.read()
 
-# import substitutionanalysis.txt into a varialbe
-with open('prompts/substitutionanalysis.txt', 'r') as f:
+# import substitution_analysis.txt into a variable
+with open('prompts/substitution_analysis.txt', 'r') as f:
     substitution_analysis = f.read()
+
+
+# import substitution_analysis.txt into a variable
+with open('prompts/free_agent_search.txt', 'r') as f:
+    free_agent_search = f.read()
+
+    # import substitution_analysis.txt into a variable
+with open('prompts/trade_eval.txt', 'r') as f:
+    trade_eval = f.read()
 
 def has_position(player: Player, position: str) -> bool:
     return player.position.upper() == position.upper()
@@ -42,16 +55,15 @@ def pretty_print_players(players: List[Player], league: League) -> str:
 
 def main():
 
-    ollama = Client()
+    ollama = Client(host=OLLAMA_URL)
 
     # Pull league data
     league = League(
         league_id=LEAGUE_ID,
         year=LEAGUE_YEAR,
         espn_s2=ESPN_S2,
-        swid=ESPN_SWID
+        swid=ESPN_SW_ID
     )
-    print(league.free_agents(size=1000, position="QB"))
 
     # Find the agent's team
     my_team = None
@@ -60,10 +72,9 @@ def main():
             my_team = team
             break
     print(my_team)
-    current_roster = my_team.roster
 
     # Analyze my current roster for substitutions
-    for position in ["QB"]: #, "RB", "WR", "TE", "FLEX", "D/ST", "K"]:
+    for position in POSITION_LIST: #, "RB", "WR", "TE", "FLEX", "D/ST", "K"]:
         starters = [player for player in my_team.roster if player.lineupSlot.upper() == position.upper()]
         eligible = [player for player in my_team.roster if position.upper() in player.eligibleSlots]
         
@@ -78,7 +89,7 @@ def main():
         print(substitution_analysis_prompt)
         print("Asking GPT-OSS for recommendations...")
         recommendation : ChatResponse = ollama.chat(
-            model="gpt-oss:20b",
+            model=OLLAMA_MODEL,
             think=True,
             messages=[{
                 "role": "system",
@@ -92,23 +103,63 @@ def main():
         save_rec(recommendation)
 
     # Analyze free agents position by position for waiver pickups
-    for position in ["QB", "RB", "WR", "TE", "FLEX", "D/ST", "K"]:
+    for position in POSITION_LIST:
+        eligible = [player for player in my_team.roster if position.upper() in player.eligibleSlots]
+        eligible_str = pretty_print_players(eligible, league)
         free_agents = league.free_agents(size=1000, position=position)
         free_agents_str = pretty_print_players(free_agents, league)
+        free_agent_search_prompt = free_agent_search.format(my_roster=eligible_str, free_agents=free_agents_str, position=position)
+        print("Asking GPT-OSS for recommendations...")
+        recommendation: ChatResponse = ollama.chat(
+            model=OLLAMA_MODEL,
+            think=True,
+            messages=[{
+                "role": "system",
+                "content": system_prompt
+            }, {
+                "role": "user",
+                "content": free_agent_search_prompt
+            }]
+        )
+        print(recommendation.message.content)
+        save_rec(recommendation)
 
     # Analyze other teams for possible trades
+    my_roster_str = pretty_print_players(my_team.roster, league)
+    for team in league.teams:
+        if team.team_name == TEAM_NAME:
+            continue
 
-    # Validation check that the recommended moves are valid
+        opponent_roster_str = pretty_print_players(team.roster, league)
+        trade_eval_prompt = trade_eval.format(
+            my_team_name=TEAM_NAME,
+            opponent_team_name=team.team_name,
+            my_roster=my_roster_str,
+            opponent_roster=opponent_roster_str
+        )
+        recommendation: ChatResponse = ollama.chat(
+            model=OLLAMA_MODEL,
+            think=True,
+            messages=[{
+                "role": "system",
+                "content": system_prompt
+            }, {
+                "role": "user",
+                "content": trade_eval_prompt
+            }]
+        )
+        print(recommendation.message.content)
+        save_rec(recommendation)
 
     # Notify my human handler of the recommendations via email (or discord? or signal? how would be best/easiest?)
 
 
-def save_rec(recommendation):
+def save_rec(recommendation: ChatResponse):
     # Save the recommendation to a log file
     if not os.path.exists('output'):
         os.makedirs('output')
-    with open('output/recommendations.log', 'a') as logfile:
-        logfile.append(recommendation.message.content)
+    with open('output/recommendations.md', 'a') as logfile:
+        logfile.write(recommendation.message.content)
 
 
 if __name__ == '__main__':
